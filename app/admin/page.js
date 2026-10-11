@@ -41,6 +41,27 @@ function CollectionForm({ coll, count, call, select }) {
   );
 }
 
+// Collections appear to readers in this order; the first one is also the home page.
+function Order({ collections, call }) {
+  if (collections.length < 2) return null;
+  const last = collections.length - 1;
+  return (
+    <details className="panel order">
+      <summary>Order of collections</summary>
+      <p className="hint">Readers see the collections in this order. The first one opens on the home page.</p>
+      <ol>
+        {collections.map((c, i) => (
+          <li key={c.id}>
+            <span>{label(c.name, 'en')}</span>
+            <button type="button" className="mini" disabled={i === 0} onClick={() => call('collection.move', { id: c.id, by: -1 })} aria-label={`Move ${label(c.name, 'en')} up`}>↑</button>
+            <button type="button" className="mini" disabled={i === last} onClick={() => call('collection.move', { id: c.id, by: 1 })} aria-label={`Move ${label(c.name, 'en')} down`}>↓</button>
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
 function TagRow({ coll, tag, call }) {
   const [en, setEn] = useState(tag?.name.en || '');
   const [gu, setGu] = useState(tag?.name.gu || '');
@@ -215,6 +236,7 @@ export default function Admin() {
           <option value="new">+ New collection</option>
         </select>
       </label>
+      <Order collections={catalog.collections} call={call} />
       <CollectionForm key={sel} coll={coll} count={docs.length} call={call} select={setSel} />
 
       {coll && (

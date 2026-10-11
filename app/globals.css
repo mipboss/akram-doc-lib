@@ -58,3 +58,8 @@ label.check{display:flex;gap:8px;align-items:center;color:var(--ink);margin:8px 
 .item .meta{margin:2px 0 0;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mini{flex:none;display:grid;place-items:center;width:44px;height:44px;margin-right:2px;border:0;border-radius:8px;background:none;color:var(--brand);cursor:pointer}
 .mini:hover{background:var(--chip)}
+.order summary{padding:10px 0;cursor:pointer;color:var(--brand);font-weight:600}
+.order ol{margin:0 0 6px;padding:0;list-style:none}
+.order li{display:flex;align-items:center;border-top:1px solid var(--line)}
+.order li span{flex:1;min-width:0}
+.mini:disabled{opacity:.3;cursor:default}

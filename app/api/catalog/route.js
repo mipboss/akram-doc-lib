@@ -30,6 +30,14 @@ const ops = {
     else cat.collections.push({ id: crypto.randomUUID(), path: p, name: n, tags: [] });
     return [];
   },
+  // Moves a collection one place earlier (by -1) or later (by 1) in the order readers see.
+  'collection.move'(cat, { id, by }) {
+    const i = cat.collections.indexOf(find(cat.collections, id, 'Collection'));
+    const j = i + Math.sign(by);
+    need(j >= 0 && j < cat.collections.length, 'It is already at that end.');
+    [cat.collections[i], cat.collections[j]] = [cat.collections[j], cat.collections[i]];
+    return [];
+  },
   'collection.delete'(cat, { id }) {
     find(cat.collections, id, 'Collection');
     const gone = cat.docs.filter((d) => d.collectionId === id);

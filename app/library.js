@@ -96,7 +96,8 @@ export default function Library({ catalog, path, lang: initialLang }) {
           {shown.length > 0 && (
             <ul className="list">
               {shown.slice(0, limit).map((d) => {
-                const meta = [d.size ? size(d.size) : '', ...d.tags.map((id) => '#' + label(tagName(id), lang)).filter((x) => x !== '#')].filter(Boolean).join(' · ');
+                // Tags are left out to keep rows to one line; the tag buttons above still filter by them.
+                const meta = d.size ? size(d.size) : '';
                 return (
                   <li className="item" key={d.id}>
                     <a className="open" href={d.url} target="_blank" rel="noreferrer" title={t.open}>

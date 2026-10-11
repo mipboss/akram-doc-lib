@@ -137,6 +137,29 @@ function DocRow({ doc, coll, call }) {
   );
 }
 
+function Import({ call, say, select }) {
+  async function pick(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { return say('That file is not a valid catalog (JSON) file.'); }
+    if (!confirm(`Add ${data.collections?.length ?? 0} collections and ${data.docs?.length ?? 0} documents to the library?`)) return;
+    const cat = await call('catalog.import', data);
+    if (cat && data.collections.length) select(cat.collections[cat.collections.length - data.collections.length].id);
+  }
+  return (
+    <>
+      <h2>Import and backup</h2>
+      <label className="field">Import a catalog file (.json)
+        <input type="file" accept="application/json,.json" onChange={pick} />
+        <span className="hint">Adds the collections in the file. Collections already in the library are not changed.</span>
+      </label>
+      <p><a href="/api/catalog" download="catalog.json">Download a backup of the catalog</a></p>
+    </>
+  );
+}
+
 export default function Admin() {
   const [admin, setAdmin] = useState(null);
   const [pw, setPw] = useState('');
@@ -207,6 +230,7 @@ export default function Admin() {
           {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} />)}
         </>
       )}
+      <Import call={call} say={setMsg} select={setSel} />
       <p><button className="btn alt" onClick={async () => { await fetch('/api/login', { method: 'DELETE' }); setAdmin(false); }}>Sign out</button></p>
       {msg && <p className="toast" role="status">{msg}</p>}
     </main>

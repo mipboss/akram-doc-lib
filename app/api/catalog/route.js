@@ -67,6 +67,37 @@ const ops = {
     Object.assign(d, fields);
     return unused;
   },
+  // Adds the collections, tags and documents from a catalog file; collections already in the library are never changed.
+  'catalog.import'(cat, { collections, docs }) {
+    need(Array.isArray(collections) && Array.isArray(docs), 'That is not a catalog file. It needs "collections" and "docs" lists.');
+    const paths = collections.map((c) => slug(c.path));
+    need(paths.every(Boolean), 'Every collection in the file needs a web address ("path").');
+    const clash = paths.filter((p, i) => RESERVED.includes(p) || paths.indexOf(p) !== i || cat.collections.some((c) => c.path === p));
+    need(!clash.length, `Already in the library or repeated in the file: ${clash.join(', ')}. Delete those collections first or remove them from the file.`);
+    const ids = new Map();
+    const added = collections.map((c, i) => {
+      const id = crypto.randomUUID();
+      ids.set(c.id, id);
+      const tags = (c.tags || []).map((t) => {
+        const tagId = crypto.randomUUID();
+        ids.set(`${c.id}/${t.id}`, tagId);
+        return { id: tagId, name: names(t.name, 'tag') };
+      });
+      return { id, path: paths[i], name: names(c.name, 'collection'), tags };
+    });
+    const newDocs = docs.map((d) => {
+      need(ids.has(d.collectionId), `"${d.name?.en || d.name?.gu}" belongs to a collection that is not in the file.`);
+      need(d.url, `"${d.name?.en || d.name?.gu}" has no PDF link.`);
+      return {
+        id: crypto.randomUUID(), collectionId: ids.get(d.collectionId), name: names(d.name, 'document'), sortKey: text(d.sortKey),
+        tags: (d.tags || []).map((t) => ids.get(`${d.collectionId}/${t}`)).filter(Boolean),
+        url: link(d.url), audioUrl: link(d.audioUrl), size: Number(d.size) || 0, added: d.added || null,
+      };
+    });
+    cat.collections.push(...added);
+    cat.docs.push(...newDocs);
+    return [];
+  },
   'doc.delete'(cat, { id }) {
     const d = find(cat.docs, id, 'Document');
     cat.docs = cat.docs.filter((x) => x.id !== id);

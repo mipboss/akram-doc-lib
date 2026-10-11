@@ -3,9 +3,12 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { byKey, isBlobUrl, label, size } from '@/lib/shared';
 
+// Large collections render in pages of this many cards so phones stay responsive.
+const PAGE = 100;
+
 const UI = {
-  en: { search: 'Search this collection', open: 'Open', download: 'Download', listen: 'Listen', other: 'ગુજરાતી', empty: 'No documents match. Clear the search or filters.', none: 'No documents in this collection yet.' },
-  gu: { search: 'આ સંગ્રહમાં શોધો', open: 'ખોલો', download: 'ડાઉનલોડ', listen: 'સાંભળો', other: 'English', empty: 'કોઈ દસ્તાવેજ મળ્યો નથી. શોધ અથવા ફિલ્ટર સાફ કરો.', none: 'આ સંગ્રહમાં હજી કોઈ દસ્તાવેજ નથી.' },
+  en: { search: 'Search this collection', open: 'Open', download: 'Download', listen: 'Listen', more: (n) => `Show more (${n} left)`, other: 'ગુજરાતી', empty: 'No documents match. Clear the search or filters.', none: 'No documents in this collection yet.' },
+  gu: { search: 'આ સંગ્રહમાં શોધો', open: 'ખોલો', download: 'ડાઉનલોડ', listen: 'સાંભળો', more: (n) => `વધુ બતાવો (${n} બાકી)`, other: 'English', empty: 'કોઈ દસ્તાવેજ મળ્યો નથી. શોધ અથવા ફિલ્ટર સાફ કરો.', none: 'આ સંગ્રહમાં હજી કોઈ દસ્તાવેજ નથી.' },
 };
 
 function ThemeButton() {
@@ -33,6 +36,7 @@ export default function Library({ catalog, path, lang: initialLang }) {
   const [q, setQ] = useState('');
   const [active, setActive] = useState([]);
   const [playing, setPlaying] = useState(null);
+  const [limit, setLimit] = useState(PAGE);
   const t = UI[lang];
 
   const switchLang = () => {
@@ -85,7 +89,7 @@ export default function Library({ catalog, path, lang: initialLang }) {
             </div>
           )}
           {shown.length === 0 && <p className="empty">{docs.length ? t.empty : t.none}</p>}
-          {shown.map((d) => (
+          {shown.slice(0, limit).map((d) => (
             <article className="doc" key={d.id}>
               <h3>{label(d.name, lang)}</h3>
               <div className="meta">
@@ -99,6 +103,9 @@ export default function Library({ catalog, path, lang: initialLang }) {
               </div>
             </article>
           ))}
+          {shown.length > limit && (
+            <p className="empty"><button className="btn alt" onClick={() => setLimit(limit + PAGE)}>{t.more(shown.length - limit)}</button></p>
+          )}
         </>
       )}
       {playing && <Player doc={playing} lang={lang} onClose={() => setPlaying(null)} />}

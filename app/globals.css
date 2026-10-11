@@ -63,3 +63,4 @@ label.check{display:flex;gap:8px;align-items:center;color:var(--ink);margin:8px 
 .order li{display:flex;align-items:center;border-top:1px solid var(--line)}
 .order li span{flex:1;min-width:0}
 .mini:disabled{opacity:.3;cursor:default}
+fieldset.plain{border:0;margin:0;padding:0;min-width:0}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import { byKey, label } from '@/lib/shared';
 
@@ -188,19 +188,30 @@ export default function Admin() {
   const [catalog, setCatalog] = useState(null);
   const [sel, setSel] = useState(null);
   const [added, setAdded] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const saving = useRef(false);
 
   const load = () => fetch('/api/catalog').then((r) => r.json()).then((c) => { setCatalog(c); setSel(c.collections[0]?.id || 'new'); });
   useEffect(() => { fetch('/api/login').then((r) => r.json()).then((j) => { setAdmin(j.admin); if (j.admin) load(); }); }, []);
   useEffect(() => { if (msg === 'Saved.') { const t = setTimeout(() => setMsg(''), 2500); return () => clearTimeout(t); } }, [msg]);
 
   // Runs one catalog change on the server and returns the updated catalog, or null if it failed.
+  // Changes run one at a time: each starts from the catalog the previous one saved, so none is lost.
   async function call(op, args) {
-    setMsg('Saving…');
-    const r = await fetch('/api/catalog', { method: 'POST', body: JSON.stringify({ op, ...args }) });
-    const j = await r.json().catch(() => ({ error: 'Server error. Try again.' }));
-    if (!r.ok) { setMsg(j.error); return null; }
-    setCatalog(j); setMsg('Saved.');
-    return j;
+    if (saving.current) return null;
+    saving.current = true; setBusy(true); setMsg('Saving…');
+    try {
+      const r = await fetch('/api/catalog', { method: 'POST', body: JSON.stringify({ op, ...args }) });
+      const j = await r.json().catch(() => ({ error: 'Server error. Try again.' }));
+      if (!r.ok) { setMsg(j.error); return null; }
+      setCatalog(j); setMsg('Saved.');
+      return j;
+    } catch {
+      setMsg('Could not reach the server. Check your connection and try again.');
+      return null;
+    } finally {
+      saving.current = false; setBusy(false);
+    }
   }
 
   async function login(e) {
@@ -230,29 +241,31 @@ export default function Admin() {
   return (
     <main>
       <div className="top"><h1>Manage library</h1><a href={coll ? `/${coll.path}` : '/'}>Library</a></div>
-      <label className="field">Collection
-        <select value={sel} onChange={(e) => setSel(e.target.value)}>
-          {catalog.collections.map((c) => <option key={c.id} value={c.id}>{label(c.name, 'en')}</option>)}
-          <option value="new">+ New collection</option>
-        </select>
-      </label>
-      <Order collections={catalog.collections} call={call} />
-      <CollectionForm key={sel} coll={coll} count={docs.length} call={call} select={setSel} />
+      <fieldset className="plain" disabled={busy}>
+        <label className="field">Collection
+          <select value={sel} onChange={(e) => setSel(e.target.value)}>
+            {catalog.collections.map((c) => <option key={c.id} value={c.id}>{label(c.name, 'en')}</option>)}
+            <option value="new">+ New collection</option>
+          </select>
+        </label>
+        <Order collections={catalog.collections} call={call} />
+        <CollectionForm key={sel} coll={coll} count={docs.length} call={call} select={setSel} />
 
-      {coll && (
-        <>
-          <h2>Tags</h2>
-          {coll.tags.map((t) => <TagRow key={t.id} coll={coll} tag={t} call={call} />)}
-          <TagRow key={`new-${coll.id}-${coll.tags.length}`} coll={coll} call={call} />
+        {coll && (
+          <>
+            <h2>Tags</h2>
+            {coll.tags.map((t) => <TagRow key={t.id} coll={coll} tag={t} call={call} />)}
+            <TagRow key={`new-${coll.id}-${coll.tags.length}`} coll={coll} call={call} />
 
-          <h2>Add a document</h2>
-          <DocForm key={`new-${coll.id}-${added}`} coll={coll} call={call} done={() => setAdded(added + 1)} />
+            <h2>Add a document</h2>
+            <DocForm key={`new-${coll.id}-${added}`} coll={coll} call={call} done={() => setAdded(added + 1)} />
 
-          <h2>Documents ({docs.length})</h2>
-          {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} />)}
-        </>
-      )}
-      <Import call={call} say={setMsg} select={setSel} />
+            <h2>Documents ({docs.length})</h2>
+            {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} />)}
+          </>
+        )}
+        <Import call={call} say={setMsg} select={setSel} />
+      </fieldset>
       <p><button className="btn alt" onClick={async () => { await fetch('/api/login', { method: 'DELETE' }); setAdmin(false); }}>Sign out</button></p>
       {msg && <p className="toast" role="status">{msg}</p>}
     </main>

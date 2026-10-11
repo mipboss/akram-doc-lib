@@ -21,13 +21,14 @@ const find = (list, id, what) => {
 
 // Each operation edits the catalog in place and returns the file URLs that are no longer used.
 const ops = {
-  'collection.save'(cat, { id, path, name }) {
+  'collection.save'(cat, { id, path, name, sort }) {
     const n = names(name, 'collection');
     const p = slug(path) || slug(n.en) || 'collection_' + (cat.collections.length + 1);
     need(!RESERVED.includes(p), `"${p}" is reserved. Choose another web address.`);
     need(!cat.collections.some((c) => c.path === p && c.id !== id), `Another collection already uses "${p}".`);
-    if (id) Object.assign(find(cat.collections, id, 'Collection'), { path: p, name: n });
-    else cat.collections.push({ id: crypto.randomUUID(), path: p, name: n, tags: [] });
+    const order = sort === 'name' ? 'name' : 'key';
+    if (id) Object.assign(find(cat.collections, id, 'Collection'), { path: p, name: n, sort: order });
+    else cat.collections.push({ id: crypto.randomUUID(), path: p, name: n, sort: order, tags: [] });
     return [];
   },
   // Moves a collection one place earlier (by -1) or later (by 1) in the order readers see.

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { byKey, isBlobUrl, label, size } from '@/lib/shared';
+import { docOrder, isBlobUrl, label, size } from '@/lib/shared';
 
 // Large collections render in pages of this many cards so phones stay responsive.
 const PAGE = 100;
@@ -50,7 +50,7 @@ export default function Library({ catalog, path, lang: initialLang }) {
   };
 
   const coll = catalog?.collections.find((c) => c.path === path) || catalog?.collections[0];
-  const docs = useMemo(() => (catalog?.docs || []).filter((d) => d.collectionId === coll?.id).sort(byKey), [catalog, coll]);
+  const docs = useMemo(() => (catalog?.docs || []).filter((d) => d.collectionId === coll?.id).sort(docOrder(coll, lang)), [catalog, coll, lang]);
   const tagName = (id) => coll.tags.find((x) => x.id === id)?.name;
   const tags = coll?.tags.filter((tag) => docs.some((d) => d.tags.includes(tag.id))) || [];
   const on = active.filter((id) => tags.some((tag) => tag.id === id));

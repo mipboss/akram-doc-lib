@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
-import { byKey, label } from '@/lib/shared';
+import { docOrder, label } from '@/lib/shared';
 
 const toVercel = (file, folder) =>
   upload(`${folder}/${file.name}`, file, { access: 'public', handleUploadUrl: '/api/upload', multipart: file.size > 50 * 1024 * 1024 });
@@ -53,12 +53,12 @@ const Field = ({ label: text, hint, ...props }) => (
 );
 
 function CollectionForm({ coll, count, call, select }) {
-  const [f, setF] = useState({ en: coll?.name.en || '', gu: coll?.name.gu || '', path: coll?.path || '' });
+  const [f, setF] = useState({ en: coll?.name.en || '', gu: coll?.name.gu || '', path: coll?.path || '', sort: coll?.sort || 'key' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
   async function save(e) {
     e.preventDefault();
-    const cat = await call('collection.save', { id: coll?.id, path: f.path, name: { en: f.en, gu: f.gu } });
+    const cat = await call('collection.save', { id: coll?.id, path: f.path, name: { en: f.en, gu: f.gu }, sort: f.sort });
     if (cat && !coll) select(cat.collections.at(-1).id);
   }
   async function remove() {
@@ -75,6 +75,12 @@ function CollectionForm({ coll, count, call, select }) {
       </div>
       <Field label="Web address" value={f.path} onChange={set('path')} placeholder="made from the English name"
         hint={coll ? `Library page: /${coll.path}` : 'Letters, numbers and underscores, e.g. pads_by_cd'} />
+      <label className="field">Order documents by
+        <select value={f.sort} onChange={set('sort')}>
+          <option value="key">Sort key</option>
+          <option value="name">Name (Gujarati or English, as shown to the reader)</option>
+        </select>
+      </label>
       <div className="row">
         <button className="btn">{coll ? 'Save collection' : 'Create collection'}</button>
         {coll && <button type="button" className="btn alt" onClick={remove}>Delete collection</button>}
@@ -297,7 +303,7 @@ export default function Admin() {
   if (!catalog) return <main><p className="empty">Loading…</p></main>;
 
   const coll = catalog.collections.find((c) => c.id === sel);
-  const docs = coll ? catalog.docs.filter((d) => d.collectionId === coll.id).sort(byKey) : [];
+  const docs = coll ? catalog.docs.filter((d) => d.collectionId === coll.id).sort(docOrder(coll, 'en')) : [];
   return (
     <main>
       <div className="top"><h1>Manage library</h1><a href={coll ? `/${coll.path}` : '/'}>Library</a></div>

@@ -6,6 +6,10 @@ import { byKey, isBlobUrl, label, size } from '@/lib/shared';
 // Large collections render in pages of this many cards so phones stay responsive.
 const PAGE = 100;
 
+const icon = (d) => <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+const PLAY = icon('M7 4v16l13-8z');
+const DOWNLOAD = icon('M12 3v12m-5-5 5 5 5-5M5 21h14');
+
 const UI = {
   en: { search: 'Search this collection', open: 'Open', download: 'Download', listen: 'Listen', more: (n) => `Show more (${n} left)`, other: 'ગુજરાતી', empty: 'No documents match. Clear the search or filters.', none: 'No documents in this collection yet.' },
   gu: { search: 'આ સંગ્રહમાં શોધો', open: 'ખોલો', download: 'ડાઉનલોડ', listen: 'સાંભળો', more: (n) => `વધુ બતાવો (${n} બાકી)`, other: 'English', empty: 'કોઈ દસ્તાવેજ મળ્યો નથી. શોધ અથવા ફિલ્ટર સાફ કરો.', none: 'આ સંગ્રહમાં હજી કોઈ દસ્તાવેજ નથી.' },
@@ -89,20 +93,24 @@ export default function Library({ catalog, path, lang: initialLang }) {
             </div>
           )}
           {shown.length === 0 && <p className="empty">{docs.length ? t.empty : t.none}</p>}
-          {shown.slice(0, limit).map((d) => (
-            <article className="doc" key={d.id}>
-              <h3>{label(d.name, lang)}</h3>
-              <div className="meta">
-                {[d.size ? size(d.size) : '', d.added ? new Date(d.added).toLocaleDateString(lang === 'gu' ? 'gu-IN' : undefined) : '',
-                  ...d.tags.map((id) => '#' + label(tagName(id), lang)).filter((x) => x !== '#')].filter(Boolean).join(' · ')}
-              </div>
-              <div className="row" style={{ margin: 0 }}>
-                <a className="btn" href={d.url} target="_blank" rel="noreferrer">{t.open}</a>
-                <a className="btn alt" href={isBlobUrl(d.url) ? `${d.url}?download=1` : d.url} download>{t.download}</a>
-                {d.audioUrl && <button className="btn alt" onClick={() => setPlaying(d)}>▶ {t.listen}</button>}
-              </div>
-            </article>
-          ))}
+          {shown.length > 0 && (
+            <ul className="list">
+              {shown.slice(0, limit).map((d) => {
+                const meta = [d.size ? size(d.size) : '', ...d.tags.map((id) => '#' + label(tagName(id), lang)).filter((x) => x !== '#')].filter(Boolean).join(' · ');
+                return (
+                  <li className="item" key={d.id}>
+                    <a className="open" href={d.url} target="_blank" rel="noreferrer" title={t.open}>
+                      <span className="name">{label(d.name, lang)}</span>
+                      {meta && <span className="meta">{meta}</span>}
+                    </a>
+                    {d.audioUrl && <button className="mini" onClick={() => setPlaying(d)} aria-label={`${t.listen}: ${label(d.name, lang)}`} title={t.listen}>{PLAY}</button>}
+                    {/* Browsers ignore "download" for files on other sites, so only offer it for our own uploads. */}
+                    {isBlobUrl(d.url) && <a className="mini" href={`${d.url}?download=1`} aria-label={`${t.download}: ${label(d.name, lang)}`} title={t.download}>{DOWNLOAD}</a>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
           {shown.length > limit && (
             <p className="empty"><button className="btn alt" onClick={() => setLimit(limit + PAGE)}>{t.more(shown.length - limit)}</button></p>
           )}

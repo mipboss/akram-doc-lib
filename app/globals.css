@@ -10,7 +10,7 @@ h2{font-size:1.05rem;margin:22px 0 8px}
 a{color:var(--brand)}
 input,button,select{font:inherit;color:inherit}
 select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
-input[type=text],input[type=password],input[type=search],input[type=file]{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+input[type=text],input[type=url],input[type=password],input[type=search],input[type=file]{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
 input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--hi);outline-offset:2px}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .scroll{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;scrollbar-width:none}
@@ -64,3 +64,7 @@ label.check{display:flex;gap:8px;align-items:center;color:var(--ink);margin:8px 
 .order li span{flex:1;min-width:0}
 .mini:disabled{opacity:.3;cursor:default}
 fieldset.plain{border:0;margin:0;padding:0;min-width:0}
+.source{margin-bottom:6px}
+.source label.hint{margin:6px 0 0}
+.source label.hint input{margin-top:4px;padding:6px 10px;font-size:.85rem}
+.source input:disabled{opacity:.6}

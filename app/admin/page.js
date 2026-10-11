@@ -78,27 +78,50 @@ function TagRow({ coll, tag, call }) {
   );
 }
 
+// The file name from a file or a link, without its extension: "Aptvani-01.pdf" -> "Aptvani-01".
+const fileName = (s) => decodeURIComponent(String(s).split(/[?#]/)[0].split('/').pop()).replace(/\.[^.]+$/, '');
+
+// A file's location: a link to paste or edit, or a file to upload in its place.
+function Source({ label: text, accept, link, setLink, file, setFile }) {
+  return (
+    <div className="source">
+      <label className="field">{text}
+        <input type="text" inputMode="url" value={file ? '' : link} onChange={(e) => setLink(e.target.value)} disabled={!!file}
+          placeholder={file ? `${file.name} uploads when you save` : 'https://…'} />
+      </label>
+      {link && !file && <a className="hint" href={link} target="_blank" rel="noreferrer">Open this link</a>}
+      <label className="hint">or upload a file
+        <input type="file" accept={accept} onChange={(e) => setFile(e.target.files[0] || null)} />
+      </label>
+    </div>
+  );
+}
+
 function DocForm({ coll, doc, call, done }) {
-  const [f, setF] = useState({ en: doc?.name.en || '', gu: doc?.name.gu || '', sortKey: doc?.sortKey || '', tags: doc?.tags || [], dropAudio: false });
+  const [f, setF] = useState({
+    en: doc?.name.en || '', gu: doc?.name.gu || '', sortKey: doc?.sortKey || '', tags: doc?.tags || [],
+    url: doc?.url || '', audioUrl: doc?.audioUrl || '',
+  });
   const [pdf, setPdf] = useState(null);
   const [audio, setAudio] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  const setTo = (k) => (v) => setF({ ...f, [k]: v });
   const toggle = (id) => setF({ ...f, tags: f.tags.includes(id) ? f.tags.filter((t) => t !== id) : [...f.tags, id] });
 
   async function save(e) {
     e.preventDefault();
-    if (!doc && !pdf) return setErr('Choose a PDF file.');
-    setBusy(true); setErr('Uploading…');
+    if (!pdf && !f.url.trim()) return setErr('Paste a PDF link or choose a PDF file.');
+    setBusy(true); setErr(pdf || audio ? 'Uploading…' : '');
     try {
-      const url = pdf ? (await send(pdf, `docs/${coll.path}`)).url : doc.url;
-      const audioUrl = audio ? (await send(audio, `audio/${coll.path}`)).url : f.dropAudio ? null : doc?.audioUrl || null;
-      const en = f.en.trim() || f.gu.trim() || !pdf ? f.en : pdf.name.replace(/\.pdf$/i, '');
+      const url = pdf ? (await send(pdf, `docs/${coll.path}`)).url : f.url.trim();
+      const audioUrl = audio ? (await send(audio, `audio/${coll.path}`)).url : f.audioUrl.trim() || null;
+      const en = f.en.trim() || f.gu.trim() ? f.en : fileName(pdf ? pdf.name : url);
       setErr('');
       const ok = await call('doc.save', {
         id: doc?.id, collectionId: coll.id, name: { en, gu: f.gu }, sortKey: f.sortKey, tags: f.tags,
-        url, audioUrl, size: pdf ? pdf.size : doc.size,
+        url, audioUrl, size: pdf ? pdf.size : url === doc?.url ? doc.size : 0,
       });
       if (ok) return done();
     } catch (e) { setErr('Upload failed: ' + e.message); }
@@ -107,15 +130,8 @@ function DocForm({ coll, doc, call, done }) {
 
   return (
     <form className="panel" onSubmit={save}>
-      <label className="field">{doc ? 'Replace PDF (optional)' : 'PDF file'}
-        <input type="file" accept="application/pdf" onChange={(e) => setPdf(e.target.files[0] || null)} />
-      </label>
-      <label className="field">{doc?.audioUrl ? 'Replace audio (optional)' : 'Audio (optional)'}
-        <input type="file" accept="audio/*" onChange={(e) => setAudio(e.target.files[0] || null)} />
-      </label>
-      {doc?.audioUrl && !audio && (
-        <label className="check"><input type="checkbox" checked={f.dropAudio} onChange={(e) => setF({ ...f, dropAudio: e.target.checked })} /> Remove the current audio</label>
-      )}
+      <Source label="PDF link" accept="application/pdf" link={f.url} setLink={setTo('url')} file={pdf} setFile={setPdf} />
+      <Source label="Audio link (optional)" accept="audio/*" link={f.audioUrl} setLink={setTo('audioUrl')} file={audio} setFile={setAudio} />
       <div className="pair">
         <Field label="English name" value={f.en} onChange={set('en')} placeholder={doc ? '' : 'defaults to the file name'} />
         <Field label="Gujarati name" lang="gu" value={f.gu} onChange={set('gu')} />

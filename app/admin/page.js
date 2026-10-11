@@ -3,8 +3,50 @@ import { useEffect, useRef, useState } from 'react';
 import { upload } from '@vercel/blob/client';
 import { byKey, label } from '@/lib/shared';
 
-const send = (file, folder) =>
+const toVercel = (file, folder) =>
   upload(`${folder}/${file.name}`, file, { access: 'public', handleUploadUrl: '/api/upload', multipart: file.size > 50 * 1024 * 1024 });
+
+// The server signs an upload form; the browser then posts the file straight to the bucket.
+async function toS3(file, folder) {
+  const r = await fetch('/api/upload/s3', { method: 'POST', body: JSON.stringify({ folder, name: file.name, type: file.type }) });
+  const j = await r.json().catch(() => ({ error: 'Server error' }));
+  if (!r.ok) throw new Error(j.error);
+  const form = new FormData();
+  Object.entries(j.fields).forEach(([k, v]) => form.append(k, v));
+  form.append('file', file);
+  const up = await fetch(j.url, { method: 'POST', body: form }).catch(() => null);
+  if (!up?.ok) throw new Error(`S3 did not accept the file${up ? ` (${up.status})` : ''}. Check the bucket's CORS settings and the access key's permissions.`);
+  return { url: j.fileUrl };
+}
+
+const send = (store, file, folder) => (store.to === 's3' ? toS3 : toVercel)(file, folder);
+
+// Where new uploads go. S3 is offered only when the server has S3 settings; the choice is remembered on this device.
+function useStore(signedIn) {
+  const [s3, setS3] = useState(null);
+  const [to, setToState] = useState('vercel');
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch('/api/upload/s3').then((r) => r.json()).then((j) => {
+      setS3(j.enabled ? j.bucket : null);
+      let saved = null;
+      try { saved = localStorage.getItem('uploadTo'); } catch {}
+      if (j.enabled) setToState(saved || 's3');
+    }).catch(() => {});
+  }, [signedIn]);
+  const setTo = (v) => { setToState(v); try { localStorage.setItem('uploadTo', v); } catch {} };
+  return { s3, to: s3 ? to : 'vercel', setTo };
+}
+
+function StorePicker({ store }) {
+  if (!store.s3) return <p className="hint">Uploads go to Vercel Blob. To upload to AWS S3, add the S3 settings in Vercel (see the README).</p>;
+  return (
+    <fieldset className="checks"><legend>Upload files to</legend>
+      <label className="check"><input type="radio" name="store" checked={store.to === 's3'} onChange={() => store.setTo('s3')} /> AWS S3 ({store.s3})</label>
+      <label className="check"><input type="radio" name="store" checked={store.to === 'vercel'} onChange={() => store.setTo('vercel')} /> Vercel Blob</label>
+    </fieldset>
+  );
+}
 
 const Field = ({ label: text, hint, ...props }) => (
   <label className="field">{text}<input type="text" {...props} />{hint && <span className="hint">{hint}</span>}</label>
@@ -97,7 +139,7 @@ function Source({ label: text, accept, link, setLink, file, setFile }) {
   );
 }
 
-function DocForm({ coll, doc, call, done }) {
+function DocForm({ coll, doc, call, done, store }) {
   const [f, setF] = useState({
     en: doc?.name.en || '', gu: doc?.name.gu || '', sortKey: doc?.sortKey || '', tags: doc?.tags || [],
     url: doc?.url || '', audioUrl: doc?.audioUrl || '',
@@ -115,8 +157,8 @@ function DocForm({ coll, doc, call, done }) {
     if (!pdf && !f.url.trim()) return setErr('Paste a PDF link or choose a PDF file.');
     setBusy(true); setErr(pdf || audio ? 'Uploading…' : '');
     try {
-      const url = pdf ? (await send(pdf, `docs/${coll.path}`)).url : f.url.trim();
-      const audioUrl = audio ? (await send(audio, `audio/${coll.path}`)).url : f.audioUrl.trim() || null;
+      const url = pdf ? (await send(store, pdf, `docs/${coll.path}`)).url : f.url.trim();
+      const audioUrl = audio ? (await send(store, audio, `audio/${coll.path}`)).url : f.audioUrl.trim() || null;
       const en = f.en.trim() || f.gu.trim() ? f.en : fileName(pdf ? pdf.name : url);
       setErr('');
       const ok = await call('doc.save', {
@@ -132,6 +174,7 @@ function DocForm({ coll, doc, call, done }) {
     <form className="panel" onSubmit={save}>
       <Source label="PDF link" accept="application/pdf" link={f.url} setLink={setTo('url')} file={pdf} setFile={setPdf} />
       <Source label="Audio link (optional)" accept="audio/*" link={f.audioUrl} setLink={setTo('audioUrl')} file={audio} setFile={setAudio} />
+      {(pdf || audio) && <StorePicker store={store} />}
       <div className="pair">
         <Field label="English name" value={f.en} onChange={set('en')} placeholder={doc ? '' : 'defaults to the file name'} />
         <Field label="Gujarati name" lang="gu" value={f.gu} onChange={set('gu')} />
@@ -153,7 +196,7 @@ function DocForm({ coll, doc, call, done }) {
   );
 }
 
-function DocRow({ doc, coll, call }) {
+function DocRow({ doc, coll, call, store }) {
   const [editing, setEditing] = useState(false);
   const tags = doc.tags.map((id) => coll.tags.find((t) => t.id === id)).filter(Boolean);
   const remove = () => confirm(`Delete "${label(doc.name, 'en')}"? Its PDF and audio files are deleted too.`) && call('doc.delete', { id: doc.id });
@@ -164,7 +207,7 @@ function DocRow({ doc, coll, call }) {
         {[doc.sortKey && `Sort ${doc.sortKey}`, doc.audioUrl && '♪ Audio', ...tags.map((t) => '#' + label(t.name, 'en'))].filter(Boolean).join(' · ')}
       </div>
       {editing
-        ? <DocForm coll={coll} doc={doc} call={call} done={() => setEditing(false)} />
+        ? <DocForm coll={coll} doc={doc} call={call} done={() => setEditing(false)} store={store} />
         : <div className="row" style={{ margin: 0 }}>
             <button className="btn alt" onClick={() => setEditing(true)}>Edit</button>
             <button className="btn alt" onClick={remove}>Delete</button>
@@ -206,6 +249,7 @@ export default function Admin() {
   const [added, setAdded] = useState(0);
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const store = useStore(admin);
 
   const load = () => fetch('/api/catalog').then((r) => r.json()).then((c) => { setCatalog(c); setSel(c.collections[0]?.id || 'new'); });
   useEffect(() => { fetch('/api/login').then((r) => r.json()).then((j) => { setAdmin(j.admin); if (j.admin) load(); }); }, []);
@@ -274,10 +318,10 @@ export default function Admin() {
             <TagRow key={`new-${coll.id}-${coll.tags.length}`} coll={coll} call={call} />
 
             <h2>Add a document</h2>
-            <DocForm key={`new-${coll.id}-${added}`} coll={coll} call={call} done={() => setAdded(added + 1)} />
+            <DocForm key={`new-${coll.id}-${added}`} coll={coll} call={call} done={() => setAdded(added + 1)} store={store} />
 
             <h2>Documents ({docs.length})</h2>
-            {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} />)}
+            {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} store={store} />)}
           </>
         )}
         <Import call={call} say={setMsg} select={setSel} />

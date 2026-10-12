@@ -2,12 +2,17 @@
   "name": "pdf-library",
   "version": "1.0.0",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1141.0",
     "@aws-sdk/s3-presigned-post": "3.1141.0",
     "@vercel/blob": "^1.0.0",
     "next": "15.5.27",
+    "pdfjs-dist": "6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   }

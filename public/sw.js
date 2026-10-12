@@ -8,6 +8,8 @@
 // Change this name to discard everything stored by an older version of this file (e.g. after changing the icons).
 const CACHE = 'pdf-library-v1';
 const OFFLINE = '/offline.html';
+// Documents saved by readers (see lib/offline.js). Kept across app updates; only readers remove them.
+const FILES = 'pdf-library-files';
 // Stored when the worker installs, so the offline page and its icon are always available.
 const PRELOAD = [OFFLINE, '/icon.svg', '/icons/icon-192.png'];
 
@@ -22,7 +24,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== FILES).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -45,7 +47,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Pages: the network first, so readers see the latest catalog; the stored copy only when offline.
-  if (request.mode === 'navigate') {
+  // Besides real visits, the library asks for its own page (Accept: text/html) to keep it once documents are saved.
+  if (request.mode === 'navigate' || request.headers.get('Accept') === 'text/html') {
     event.respondWith(
       fetch(request)
         .then((res) => {

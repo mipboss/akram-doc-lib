@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline · PDF Library</title>
+<link rel="icon" href="/icon.svg">
+<!-- Shown by the service worker when there is no internet and this page was never opened before. -->
+<style>
+  :root{--bg:#f3f5f8;--ink:#16202e;--mute:#5d6b7e;--brand:#1d3557;color-scheme:light}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1620;--ink:#e8edf4;--mute:#97a4b6;--brand:#7fb0ff;color-scheme:dark}}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center;padding:16px;box-sizing:border-box}
+  img{width:72px;height:72px}
+  h1{font-size:1.3rem;margin:16px 0 4px}
+  p{color:var(--mute);margin:4px 0}
+  button{margin-top:18px;border:0;border-radius:8px;padding:10px 18px;background:var(--brand);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+  <main>
+    <img src="/icon.svg" alt="">
+    <h1>You're offline</h1>
+    <p>Connect to the internet to open this page.</p>
+    <p lang="gu">આ પાનું ખોલવા ઇન્ટરનેટથી જોડાઓ.</p>
+    <p>Pages you opened before still work offline.</p>
+    <button onclick="location.reload()">Try again</button>
+  </main>
+</body>
+</html>

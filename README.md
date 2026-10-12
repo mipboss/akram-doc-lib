@@ -35,4 +35,4 @@ The app never deletes files from S3, even when a document is deleted or its file
 - The catalog is a JSON file in Blob; each save writes a new `catalog/<time>.json` and the last 10 are kept as backups. It is fine for thousands of documents and a few admins. For heavy concurrent edits, move it to a database such as Neon Postgres.
 - A catalog from the first version (a flat list with categories) is converted when it is read: each category becomes a collection. It is saved in the new format the first time an administrator changes something.
 - Documents can also point at PDFs or audio hosted elsewhere; deleting them never deletes files outside this project's Blob store.
-- Use "Add to Home Screen" on a phone to run it like an app (manifest included).
+- It is an installable web app: Chrome and Edge offer "Install app", and on iPhone use Share > Add to Home Screen. A service worker (`public/sw.js`) keeps the app's code and the pages a reader opened, so those open without internet; other pages show `public/offline.html`. It never stores PDFs or audio. The icon source is `public/icon.svg`; the PNGs in `public/icons/` are made from it.

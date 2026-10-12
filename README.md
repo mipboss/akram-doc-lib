@@ -19,6 +19,11 @@ Saved PDFs and audio are stored in the reader's browser (`lib/offline.js`) and s
 - **Vercel Blob**: works as is.
 - **AWS S3**: add this site to the bucket's CORS settings with `GET` (see the S3 section below). Until then, saving an S3 file says the server does not allow it yet.
 
+## Files bucket (AWS)
+`infra/files-bucket.yaml` is the CloudFormation template for the bucket that holds the library's PDFs (`akram-doc-lib-<account id>`, us-east-1): public read over HTTPS only, versioned, and CORS for this site. Deploy or update it with:
+`aws cloudformation deploy --stack-name akram-doc-lib-files --template-file infra/files-bucket.yaml`
+After moving files to a new bucket with the same paths, use **Replace links** on the admin page to point the catalog at it.
+
 ## Optional: upload to AWS S3
 1. In AWS IAM, create an access key for a user whose only permission is uploading to the bucket:
    ```json

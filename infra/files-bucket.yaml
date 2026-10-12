@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: S3 bucket for the PDF and audio files of akram-doc-lib.vercel.app - public read, HTTPS only, versioned.
+
+Parameters:
+  SiteOrigin:
+    Type: String
+    Default: https://akram-doc-lib.vercel.app
+    Description: The site allowed to read (offline saving) and upload (admin) files from the browser.
+
+Resources:
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    # Keep the files if this stack is ever deleted.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub akram-doc-lib-${AWS::AccountId}
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced # ACLs off; access only through the bucket policy
+      PublicAccessBlockConfiguration:
+        # Readers open files by link, so the public-read bucket policy below must be allowed. ACLs stay blocked.
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled # an overwritten or deleted file can be restored for 30 days
+      LifecycleConfiguration:
+        Rules:
+          - Id: tidy-up
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: [!Ref SiteOrigin, 'http://localhost:3000']
+            AllowedMethods: [GET, HEAD, POST]
+            AllowedHeaders: ['*']
+            MaxAge: 3600
+      Tags:
+        - Key: app
+          Value: akram-doc-lib
+
+  FilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FilesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: PublicReadFiles
+            Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub ${FilesBucket.Arn}/*
+          - Sid: HttpsOnly
+            Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource: [!GetAtt FilesBucket.Arn, !Sub '${FilesBucket.Arn}/*']
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+Outputs:
+  BucketName:
+    Value: !Ref FilesBucket
+  BaseUrl:
+    Description: Prefix for file links in the catalog.
+    Value: !Sub https://${FilesBucket}.s3.${AWS::Region}.amazonaws.com/

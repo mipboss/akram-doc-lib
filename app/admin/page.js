@@ -223,7 +223,27 @@ function DocRow({ doc, coll, call, store }) {
   );
 }
 
-function Import({ call, say, select }) {
+// Rewrites the start of every matching link in one step, e.g. when files move to a new bucket with the same paths.
+function ReplaceLinks({ catalog, call }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const count = from ? catalog.docs.filter((d) => d.url.startsWith(from) || d.audioUrl?.startsWith(from)).length : 0;
+  async function run(e) {
+    e.preventDefault();
+    if (!confirm(`Change the links of ${count} documents from\n${from}\nto\n${to}?\n\nDownload a backup first if you may want to undo this.`)) return;
+    if (await call('docs.relink', { from, to })) { setFrom(''); setTo(''); }
+  }
+  return (
+    <form className="panel" onSubmit={run}>
+      <Field label="Replace links that start with" inputMode="url" value={from} onChange={(e) => setFrom(e.target.value)} placeholder="https://old-bucket.s3.us-east-1.amazonaws.com/"
+        hint={from ? `${count} documents match` : 'Every PDF and audio link starting with this text is changed.'} />
+      <Field label="with" inputMode="url" value={to} onChange={(e) => setTo(e.target.value)} placeholder="https://new-bucket.s3.us-east-1.amazonaws.com/" />
+      <div className="row"><button className="btn" disabled={!count || !to}>Replace links</button></div>
+    </form>
+  );
+}
+
+function Import({ catalog, call, say, select }) {
   async function pick(e) {
     const file = e.target.files[0];
     e.target.value = '';
@@ -242,6 +262,8 @@ function Import({ call, say, select }) {
         <span className="hint">Adds the collections in the file. Collections already in the library are not changed.</span>
       </label>
       <p><a href="/api/catalog" download="catalog.json">Download a backup of the catalog</a></p>
+      <h2>Replace links</h2>
+      <ReplaceLinks catalog={catalog} call={call} />
     </>
   );
 }
@@ -330,7 +352,7 @@ export default function Admin() {
             {docs.map((d) => <DocRow key={d.id} doc={d} coll={coll} call={call} store={store} />)}
           </>
         )}
-        <Import call={call} say={setMsg} select={setSel} />
+        <Import catalog={catalog} call={call} say={setMsg} select={setSel} />
       </fieldset>
       <p><button className="btn alt" onClick={async () => { await fetch('/api/login', { method: 'DELETE' }); setAdmin(false); }}>Sign out</button></p>
       {msg && <p className="toast" role="status">{msg}</p>}

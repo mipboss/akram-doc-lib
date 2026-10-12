@@ -107,6 +107,17 @@ const ops = {
     cat.docs.push(...newDocs);
     return [];
   },
+  // Changes the start of PDF and audio links, e.g. after moving files to another bucket. Returns no files to
+  // delete: the old copies may still be used elsewhere.
+  'docs.relink'(cat, { from, to }) {
+    need(/^https?:\/\/\S+$/.test(from || '') && /^https?:\/\/\S+$/.test(to || ''), 'Both must be web links starting with http:// or https://');
+    need(from !== to, 'The new link start is the same as the old one');
+    for (const d of cat.docs) {
+      if (d.url.startsWith(from)) d.url = to + d.url.slice(from.length);
+      if (d.audioUrl?.startsWith(from)) d.audioUrl = to + d.audioUrl.slice(from.length);
+    }
+    return [];
+  },
   'doc.delete'(cat, { id }) {
     const d = find(cat.docs, id, 'Document');
     cat.docs = cat.docs.filter((x) => x.id !== id);

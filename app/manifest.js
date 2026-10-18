@@ -2,8 +2,8 @@
 // start page and colours. Next.js adds the <link rel="manifest"> tag to every page automatically.
 export default function manifest() {
   return {
-    name: 'PDF Library',
-    short_name: 'PDF Library',
+    name: 'Akram Document Library',
+    short_name: 'Akram Document Library',
     description: 'Find, read and listen to documents by collection, name or tag.',
     id: '/',
     start_url: '/',

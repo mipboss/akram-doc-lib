@@ -163,7 +163,7 @@ export default function Library({ catalog, path, lang: initialLang }) {
   return (
     <main lang={lang} className={playing ? 'with-player' : ''}>
       <div className="top">
-        <h1>{coll ? label(coll.name, lang) : 'PDF Library'}</h1>
+        <h1>{coll ? label(coll.name, lang) : 'Akram Document Library'}</h1>
         <div className="row tools">
           <button className="icon" onClick={switchLang} lang={lang === 'gu' ? 'en' : 'gu'}>{t.other}</button>
           <ThemeButton />

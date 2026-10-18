@@ -1,4 +1,4 @@
-# PDF Library (Next.js on Vercel)
+# Akram Document Library (Next.js on Vercel)
 
 Mobile-first library of PDFs, with optional audio, in English and Gujarati.
 

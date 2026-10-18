@@ -2,11 +2,11 @@ import './globals.css';
 import RegisterServiceWorker from './register-sw';
 
 export const metadata = {
-  title: 'PDF Library',
+  title: 'Akram Document Library',
   description: 'Find, read and listen to documents by collection, name or tag.',
   icons: { icon: '/icon.svg', apple: '/icons/apple-touch-icon.png' },
   // iPhone and iPad: open full screen from the Home Screen, under this name.
-  appleWebApp: { capable: true, title: 'PDF Library', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'Akram Document Library', statusBarStyle: 'default' },
 };
 export const viewport = {
   width: 'device-width', initialScale: 1, viewportFit: 'cover',
